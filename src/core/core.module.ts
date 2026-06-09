@@ -18,7 +18,8 @@ import { TotpModule } from '@/src/modules/auth/totp/totp.module'
 	imports: [
 		ConfigModule.forRoot({
 			ignoreEnvFile: !IS_DEV_ENV,
-			isGlobal: true
+			isGlobal: true,
+			expandVariables: true
 		}),
 		GraphQLModule.forRootAsync({
 			driver: ApolloDriver,
