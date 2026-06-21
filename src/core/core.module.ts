@@ -13,6 +13,9 @@ import { VerificationModule } from '@/src/modules/auth/verification/verification
 import { PasswordRecoveryModule } from '@/src/modules/auth/password-recovery/password-recovery.module'
 import { MailModule } from '@/src/modules/libs/mail/mail.module'
 import { TotpModule } from '@/src/modules/auth/totp/totp.module'
+import { DeactivateModule } from '@/src/modules/auth/deactivate/deactivate.module'
+import { CronModule } from '@/src/modules/cron/cron.module'
+import { S3Module } from '@/src/modules/libs/s3/s3.module'
 
 @Module({
 	imports: [
@@ -28,13 +31,16 @@ import { TotpModule } from '@/src/modules/auth/totp/totp.module'
 			inject: [ConfigService] 
 		}),
 		MailModule,
+		S3Module,
 		PrismaModule,
 		RedisModule,
+		CronModule,
 		AccountModule,
 		SessionModule,
 		VerificationModule,
 		PasswordRecoveryModule,
 		TotpModule,
+		DeactivateModule
 	],
 	controllers: [],
 	providers: [],

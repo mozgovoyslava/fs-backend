@@ -9,17 +9,17 @@ export class CreateUserInput {
     @IsString()
     @IsNotEmpty()
     @Matches(/^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$/)
-    public username: string;
+    public username!: string;
 
     @Field()
     @IsString()
     @IsNotEmpty()
     @IsEmail()
-    public email: string;
+    public email!: string;
 
     @Field()
     @IsString()
     @IsNotEmpty()
     @MinLength(8)
-    public password: string;
+    public password!: string;
 }

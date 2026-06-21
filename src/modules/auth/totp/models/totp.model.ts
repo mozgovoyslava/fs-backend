@@ -7,9 +7,9 @@ import { Field, ObjectType } from "@nestjs/graphql";
 export class TotpModel {
 
     @Field(() => String)
-    public qrcodeUrl: string;
+    public qrcodeUrl!: string;
 
 
     @Field(() => String)
-    public secret: string;
+    public secret!: string;
 }

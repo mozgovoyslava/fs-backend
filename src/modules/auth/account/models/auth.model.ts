@@ -8,8 +8,8 @@ export class AuthModel {
 
 
     @Field(() => UserModel, {nullable: true})
-    public user: UserModel
+    public user!: UserModel | null
 
     @Field(() => String, {nullable: true})
-    public message: string
+    public message!: string | null
 }

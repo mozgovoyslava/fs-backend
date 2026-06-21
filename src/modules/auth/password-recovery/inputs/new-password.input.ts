@@ -9,7 +9,7 @@ export class NewPasswordInput {
     @IsString()
     @IsNotEmpty()
     @MinLength(8)
-    public password: string;
+    public password!: string;
 
 
     @Field(() => String)
@@ -17,11 +17,11 @@ export class NewPasswordInput {
     @IsNotEmpty()
     @MinLength(8)
     @Validate(IsPasswordConstraint)
-    public passwordRepeat: string;
+    public passwordRepeat!: string;
 
 
     @Field(() => String)
     @IsUUID('4')
     @IsNotEmpty()
-    token: string;
+    public token!: string;
 }

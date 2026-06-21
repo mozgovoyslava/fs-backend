@@ -7,16 +7,16 @@ import { Field, ID, ObjectType } from "@nestjs/graphql";
 export class LocationModel implements LocationInfo {
 
     @Field(() => String)
-    country: string;
+    country!: string;
 
     @Field(() => String)
-    city: string;
+    city!: string;
 
     @Field(() => Number)
-    longitude: number;
+    longitude!: number;
 
     @Field(() => Number)
-    latidute: number;
+    latidute!: number;
 }
 
 
@@ -24,14 +24,14 @@ export class LocationModel implements LocationInfo {
 export class DeviceModel implements DeviceInfo {
 
     @Field(() => String)
-    browser: string;
+    browser!: string;
 
     
     @Field(() => String)
-    os: string;
+    os!: string;
 
     @Field(() => String)
-    type: string;
+    type!: string;
 }
 
 
@@ -39,27 +39,27 @@ export class DeviceModel implements DeviceInfo {
 export class SessionMetadataModel implements SessionMetadata {
     
     @Field(() => LocationModel)
-    location: LocationModel
+    location!: LocationModel
 
     @Field(() => DeviceModel)
-    device: DeviceModel
+    device!: DeviceModel
 
     @Field(() => String)
-    ip: string
+    ip!: string
 }
 
 
 @ObjectType()
 export class SessionModel {
     @Field(() => ID)
-    id: string;
+    id!: string;
 
     @Field(() => String)
-    userId: string;
+    userId!: string;
 
     @Field(() => String)
-    createdAt: string
+    createdAt!: string
 
     @Field(() => SessionMetadataModel)
-    metadata: SessionMetadataModel
+    metadata!: SessionMetadataModel
 }

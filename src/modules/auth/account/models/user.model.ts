@@ -4,41 +4,47 @@ import type { User } from "@prisma/client";
 @ObjectType()
 export class UserModel implements User {
     @Field(() => ID)
-    public id: string
+    public id!: string
 
     @Field(() => String)
-    public email: string
+    public email!: string
 
     @Field(() => String)
-    public password: string
+    public password!: string
 
     @Field(() => String)
-    public username: string
+    public username!: string
 
     @Field(() => String)
-    public displayName: string
+    public displayName!: string
 
     @Field(() => String, {nullable: true})
-    public avatar: string
+    public avatar!: string | null
 
     @Field(() => String, {nullable: true})
-    public bio: string
+    public bio!: string | null
 
     @Field(() => Boolean)
-    public isEmailVerified: boolean;
+    public isEmailVerified!: boolean;
 
     @Field(() => Boolean)
-    public isVerified: boolean;
+    public isVerified!: boolean;
 
     @Field(() => Boolean)
-    public isTotpEnabled: boolean;
+    public isTotpEnabled!: boolean;
 
     @Field(() => String, {nullable: true})
-    public totpSecret: string | null;
+    public totpSecret!: string | null;
+
+    @Field(() => Boolean)
+    public isDeactivated!: boolean;
+
+    @Field(() => Date, {nullable: true})
+    public deactivatedAt!: Date | null;
 
     @Field(() => Date)
-    public createdAt: Date
+    public createdAt!: Date
 
     @Field(() => Date)
-    public updatedAt: Date
+    public updatedAt!: Date
 }
