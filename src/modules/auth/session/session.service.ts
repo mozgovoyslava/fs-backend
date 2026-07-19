@@ -1,175 +1,180 @@
-import { PrismaService } from '@/src/core/prisma/prisma.service';
-import { RedisService } from '@/src/core/redis/redis.service';
-import { LoginInput } from '@/src/modules/auth/session/inputs/login.input';
-import { VerificationService } from '@/src/modules/auth/verification/verification.service';
-import { getSessionMetadata } from '@/src/shared/utils/session-metadata.util';
-import { destroySession, saveSession } from '@/src/shared/utils/session.util';
-import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { verify } from 'argon2';
-import type { Request } from 'express';
-import { TOTP } from 'otpauth';
+import {
+	BadRequestException,
+	ConflictException,
+	Injectable,
+	NotFoundException,
+	UnauthorizedException,
+} from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { verify } from 'argon2'
+import type { Request } from 'express'
+import { TOTP } from 'otpauth'
+
+import { PrismaService } from '@/src/core/prisma/prisma.service'
+import { RedisService } from '@/src/core/redis/redis.service'
+import { LoginInput } from '@/src/modules/auth/session/inputs/login.input'
+import { VerificationService } from '@/src/modules/auth/verification/verification.service'
+import { getSessionMetadata } from '@/src/shared/utils/session-metadata.util'
+import { destroySession, saveSession } from '@/src/shared/utils/session.util'
 
 @Injectable()
 export class SessionService {
+	public constructor(
+		private readonly prismaService: PrismaService,
+		private readonly redisService: RedisService,
+		private readonly configService: ConfigService,
+		private readonly verificationService: VerificationService,
+	) {}
 
-    public constructor(
-        private readonly prismaService: PrismaService,
-        private readonly redisService: RedisService,
-        private readonly configService: ConfigService,
-        private readonly verificationService: VerificationService,
-    ) {}
+	public async findByUser(req: Request) {
+		const userId = req.session.userId
 
+		if (!userId) {
+			throw new NotFoundException('Пользователь не обнаружен в сессии')
+		}
 
-    public async findByUser(req: Request) {
-        const userId = req.session.userId;
+		const prefix = this.configService.getOrThrow<string>('SESSION_FOLDER')
+		const keys = await this.redisService.client.keys(`${prefix}*`)
 
-        if (!userId) {
-            throw new NotFoundException('Пользователь не обнаружен в сессии');
-        }
+		const userSessions: Array<Record<string, unknown>> = []
 
-        const prefix = this.configService.getOrThrow<string>('SESSION_FOLDER');
-        const keys = await this.redisService.client.keys(`${prefix}*`);
+		for (const key of keys) {
+			const sessionData = await this.redisService.client.get(key)
 
-        const userSessions: Array<Record<string, unknown>> = [];
+			if (!sessionData) {
+				continue
+			}
 
-        for (const key of keys) {
-            const sessionData = await this.redisService.client.get(key);
+			let session: Record<string, unknown>
+			try {
+				session = JSON.parse(sessionData) as Record<string, unknown>
+			} catch {
+				continue
+			}
 
-            if (!sessionData) {
-                continue;
-            }
+			if (session.userId !== userId) {
+				continue
+			}
 
-            let session: Record<string, unknown>;
-            try {
-                session = JSON.parse(sessionData) as Record<string, unknown>;
-            } catch {
-                continue;
-            }
+			userSessions.push({
+				...session,
+				id: key.substring(prefix.length),
+			})
+		}
 
-            if (session.userId !== userId) {
-                continue;
-            }
+		userSessions.sort((a, b) => {
+			const aTime = new Date(String(a.createdAt ?? 0)).getTime()
+			const bTime = new Date(String(b.createdAt ?? 0)).getTime()
+			return bTime - aTime
+		})
 
-            userSessions.push({
-                ...session,
-                id: key.substring(prefix.length)
-            })
-        }
+		return userSessions.filter(session => session.id !== req.sessionID)
+	}
 
-        userSessions.sort((a, b) => {
-            const aTime = new Date(String(a.createdAt ?? 0)).getTime();
-            const bTime = new Date(String(b.createdAt ?? 0)).getTime();
-            return bTime - aTime;
-        });
+	public async findCurrent(req: Request) {
+		const sessionId = req.sessionID
+		const prefix = this.configService.getOrThrow<string>('SESSION_FOLDER')
 
-        return userSessions.filter(session => session.id !== req.sessionID);
-    }
+		const sessionData = await this.redisService.client.get(
+			`${prefix}${sessionId}`,
+		)
 
-    public async findCurrent(req: Request) {
-        const sessionId = req.sessionID;
-        const prefix = this.configService.getOrThrow<string>('SESSION_FOLDER');
+		if (!sessionData) {
+			throw new UnauthorizedException('Нет текущей сессии')
+		}
 
-        const sessionData = await this.redisService.client.get(
-            `${prefix}${sessionId}`
-        )
+		const session = JSON.parse(sessionData)
 
-        if (!sessionData) {
-            throw new UnauthorizedException('Нет текущей сессии');
-        }
+		return {
+			...session,
+			id: sessionId,
+		}
+	}
 
-        const session = JSON.parse(sessionData);
+	public async login(req: Request, input: LoginInput, userAgent: string) {
+		const { login, password, pin } = input
 
-        return {
-            ...session,
-            id: sessionId
-        }
-    }
+		const user = await this.prismaService.user.findFirst({
+			where: {
+				OR: [
+					{ username: { equals: login } },
+					{ email: { equals: login } },
+				],
+			},
+		})
 
-    public async login(req: Request, input: LoginInput, userAgent: string) {
-        const {login, password, pin} = input;
+		if (!user) {
+			throw new NotFoundException('Пользователь не найден')
+		}
 
-        const user = await this.prismaService.user.findFirst({
-            where: {
-                OR: [
-                    {username: {equals: login}},
-                    {email: {equals: login}}
-                ]
-            }
-        })
+		const isValidPassword = await verify(user.password, password)
 
-        if (!user) {
-            throw new NotFoundException('Пользователь не найден');
-        }
+		if (!isValidPassword) {
+			throw new UnauthorizedException('Неверный пароль')
+		}
 
-        const isValidPassword = await verify(user.password, password);
+		if (!user.isEmailVerified) {
+			await this.verificationService.sendVerificationToken(user)
 
-        if (!isValidPassword) {
-            throw new UnauthorizedException('Неверный пароль');
-        }
+			throw new BadRequestException('Верифицируйте аккаунт')
+		}
 
-        if (!user.isEmailVerified) {
-            await this.verificationService.sendVerificationToken(user);
+		if (user.isTotpEnabled && user.totpSecret) {
+			if (!pin) {
+				return {
+					user: null,
+					message: 'Необходим 2FA код для завершения авторизации',
+				}
+			}
 
-            throw new BadRequestException('Верифицируйте аккаунт');
-        }
+			const totp = new TOTP({
+				issuer: 'FS_BACKEND',
+				label: `${user.email}`,
+				algorithm: 'SHA1',
+				digits: 6,
+				secret: user.totpSecret,
+			})
 
-        if (user.isTotpEnabled && user.totpSecret) {
-            if (!pin) {
-                return {
-                    user: null,
-                    message: 'Необходим 2FA код для завершения авторизации'
-                }
-            }
+			const delta = totp.validate({
+				token: pin,
+			})
 
-            const totp = new TOTP({
-                issuer: 'FS_BACKEND',
-                label: `${user.email}`,
-                algorithm: 'SHA1',
-                digits: 6,
-                secret: user.totpSecret,
-            })
+			if (delta === null) {
+				throw new BadRequestException('Неверный код')
+			}
+		}
 
-            const delta = totp.validate({
-                token: pin
-            })
+		const metadata = getSessionMetadata(req, userAgent)
 
-            if (delta === null) {
-                throw new BadRequestException('Неверный код')
-            }
-        }
+		const savedUser = await saveSession(req, user, metadata)
 
-        const metadata = getSessionMetadata(req, userAgent);
+		return {
+			user: savedUser,
+			message: null,
+		}
+	}
 
-        const savedUser = await saveSession(req, user, metadata);
+	public async logout(req: Request) {
+		return destroySession(req, this.configService)
+	}
 
-        return {
-            user: savedUser,
-            message: null
-        };
-    }
+	public async clearSession(req: Request) {
+		req.res?.clearCookie(
+			this.configService.getOrThrow<string>('SESSION_NAME'),
+		)
 
-    public async logout(req: Request) {
-        return destroySession(req, this.configService);
-    }
+		return true
+	}
 
+	public async removeSession(req: Request, sessionId: string) {
+		if (req.session.id === sessionId) {
+			throw new ConflictException('Нельзя удалить текущую сессию')
+		}
 
-    public async clearSession(req: Request) {
-        req.res?.clearCookie(this.configService.getOrThrow<string>('SESSION_NAME'));
+		await this.redisService.client.del(
+			`${this.configService.getOrThrow<string>('SESSION_FOLDER')}${sessionId}`,
+		)
 
-        return true;
-    }
-
-    public async removeSession(req: Request, sessionId: string) {
-        if (req.session.id === sessionId) {
-            throw new ConflictException('Нельзя удалить текущую сессию');
-        }
-
-        await this.redisService.client.del(
-            `${this.configService.getOrThrow<string>('SESSION_FOLDER')}${sessionId}`
-        )
-
-        return true;
-    }
+		return true
+	}
 }
-

@@ -48,13 +48,13 @@ export type StringValue =
 export function ms(str: StringValue): number {
 	if (typeof str !== 'string' || str.length === 0 || str.length > 100) {
 		throw new Error(
-			'Value provided to ms() must be a string with length between 1 and 99.'
+			'Value provided to ms() must be a string with length between 1 and 99.',
 		)
 	}
 
 	const match =
 		/^(?<value>-?(?:\d+)?\.?\d+) *(?<type>milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(
-			str
+			str,
 		)
 
 	const groups = match?.groups as { value: string; type?: string } | undefined
@@ -106,7 +106,7 @@ export function ms(str: StringValue): number {
 			return n
 		default:
 			throw new Error(
-				`Ошибка: единица времени ${type} была распознана, но не существует соответствующего случая. Пожалуйста, проверьте введенные данные.`
+				`Ошибка: единица времени ${type} была распознана, но не существует соответствующего случая. Пожалуйста, проверьте введенные данные.`,
 			)
 	}
 }

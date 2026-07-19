@@ -1,33 +1,31 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg'
+import { PrismaClient } from '@prisma/client'
+import { Pool } from 'pg'
 
 @Injectable()
 export class PrismaService
-    extends PrismaClient
-    implements OnModuleInit, OnModuleDestroy
+	extends PrismaClient
+	implements OnModuleInit, OnModuleDestroy
 {
-    constructor() {
-        const connectionString = process.env.POSTGRES_URL;
+	constructor() {
+		const connectionString = process.env.POSTGRES_URL
 
-        if (!connectionString) {
-            throw new Error(
-                'POSTGRES_URI must be set for Prisma Client',
-            );
-        }
+		if (!connectionString) {
+			throw new Error('POSTGRES_URI must be set for Prisma Client')
+		}
 
-        const pool = new Pool({ connectionString });
-        const adapter = new PrismaPg(pool);
+		const pool = new Pool({ connectionString })
+		const adapter = new PrismaPg(pool)
 
-        super({ adapter });
-    }
+		super({ adapter })
+	}
 
-    public async onModuleInit() {
-        await this.$connect();
-    }
+	public async onModuleInit() {
+		await this.$connect()
+	}
 
-    public async onModuleDestroy() {
-        await this.$disconnect();
-    }
+	public async onModuleDestroy() {
+		await this.$disconnect()
+	}
 }

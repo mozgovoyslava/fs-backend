@@ -1,35 +1,35 @@
-import { PrismaService } from "@/src/core/prisma/prisma.service";
-import { type CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
-import { GqlExecutionContext } from "@nestjs/graphql";
-import { Observable } from "rxjs";
+import {
+	type CanActivate,
+	ExecutionContext,
+	Injectable,
+	UnauthorizedException,
+} from '@nestjs/common'
+import { GqlExecutionContext } from '@nestjs/graphql'
+import { Observable } from 'rxjs'
 
-
+import { PrismaService } from '@/src/core/prisma/prisma.service'
 
 @Injectable()
 export class GqlAuthGuard implements CanActivate {
+	public constructor(private readonly prismaSerice: PrismaService) {}
 
+	public async canActivate(context: ExecutionContext): Promise<boolean> {
+		const ctx = GqlExecutionContext.create(context)
 
-    public constructor(
-        private readonly prismaSerice: PrismaService
-    ) {}
+		const request = ctx.getContext().req
 
-    public async canActivate(context: ExecutionContext): Promise<boolean> {
-        const ctx = GqlExecutionContext.create(context);
+		if (typeof request.session.userId === 'undefined') {
+			throw new UnauthorizedException('пользователь не авторизован')
+		}
 
-        const request = ctx.getContext().req
+		const user = await this.prismaSerice.user.findUnique({
+			where: {
+				id: request.session.userId,
+			},
+		})
 
-        if (typeof request.session.userId === 'undefined') {
-            throw new UnauthorizedException('пользователь не авторизован');
-        }
+		request.user = user
 
-        const user = await this.prismaSerice.user.findUnique({
-            where: {
-                id: request.session.userId
-            }
-        })
-
-        request.user = user;
-
-        return true;
-    }
+		return true
+	}
 }

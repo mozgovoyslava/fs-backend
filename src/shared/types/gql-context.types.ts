@@ -1,7 +1,6 @@
-import type { Request, Response } from "express";
-
+import type { Request, Response } from 'express'
 
 export interface GqlContext {
-    req: Request;
-    res: Response;
+	req: Request
+	res: Response
 }
