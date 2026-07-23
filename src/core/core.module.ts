@@ -27,6 +27,13 @@ import { IS_DEV_ENV } from '@/src/shared/utils/is-dev.util'
 
 import { PrismaModule } from './prisma/prisma.module'
 import { RedisModule } from './redis/redis.module'
+import { NotificationModule } from '@/src/modules/notification/notification.module'
+import { TelegramModule } from '@/src/modules/libs/telegram/telegram.module'
+import { StripeModule } from '@/src/modules/libs/stripe/stripe.module'
+import { getStripeConfig } from '@/src/core/config/stripe.config'
+import { TransactionModule } from '@/src/modules/sponsorship/transaction/transaction.module'
+import { SubscriptionModule } from '@/src/modules/sponsorship/subscription/subscription.module'
+import { PlanModule } from '@/src/modules/sponsorship/plan/plan.module'
 
 @Module({
 	imports: [
@@ -46,7 +53,14 @@ import { RedisModule } from './redis/redis.module'
 			useFactory: getLiveKitConfig,
 			inject: [ConfigService],
 		}),
+		StripeModule.registerAsync({
+			imports: [ConfigModule],
+			useFactory: getStripeConfig,
+			inject: [ConfigService],
+		}),
 		MailModule,
+		TelegramModule,
+		StripeModule,
 		S3Module,
 		LivekitModule,
 		PrismaModule,
@@ -66,6 +80,10 @@ import { RedisModule } from './redis/redis.module'
 		WebhookModule,
 		FollowModule,
 		ChannelModule,
+		NotificationModule,
+		TransactionModule,
+		SubscriptionModule,
+		PlanModule
 	],
 	controllers: [],
 	providers: [],

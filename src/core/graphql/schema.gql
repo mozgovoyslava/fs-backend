@@ -28,6 +28,16 @@ input ChangeEmailInput {
   email: String!
 }
 
+type ChangeNotificationSettingsResponse {
+  notificationSettings: NotificationSettingsModel!
+  telegramAuthToken: String
+}
+
+input ChangeNotificationsSettingsInput {
+  siteNotifications: Boolean!
+  telegramNotifications: Boolean!
+}
+
 input ChangePasswordInput {
   newPassword: String!
   oldPassword: String!
@@ -53,6 +63,12 @@ type ChatMessageModel {
   updatedAt: DateTime!
   user: UserModel!
   userId: String!
+}
+
+input CreatePlanInput {
+  description: String
+  price: Float!
+  title: String!
 }
 
 input CreateUserInput {
@@ -83,12 +99,23 @@ input EnableTotpInput {
   secret: String!
 }
 
+type FollowModel {
+  createdAt: DateTime!
+  follower: UserModel!
+  followerId: String!
+  following: UserModel!
+  followingId: String!
+  id: ID!
+  updatedAt: DateTime!
+}
+
 input GenerateStreamTokenInput {
   channelId: String!
   userId: String!
 }
 
 type GenerateStreamTokenModel {
+  serverUrl: String!
   token: String!
 }
 
@@ -105,12 +132,17 @@ input LoginInput {
   pin: String
 }
 
+type MakePaymentModel {
+  url: String!
+}
+
 type Mutation {
   NewPassword(data: NewPasswordInput!): Boolean!
   ResetPassword(data: ResetPasswordInput!): Boolean!
   cangeStreamInfo(data: ChangeStreamInput!): Boolean!
   changeChatSettinggs(data: ChangeChatSettingsInput!): Boolean!
   changeEmail(data: ChangeEmailInput!): Boolean!
+  changeNotificationSettings(data: ChangeNotificationsSettingsInput!): ChangeNotificationSettingsResponse!
   changePassword(data: ChangePasswordInput!): Boolean!
   changeProfileAvatar(avatar: Upload!): Boolean!
   changeProfileInfo(data: ChangeProfileInfoInput!): Boolean!
@@ -118,19 +150,24 @@ type Mutation {
   clearSessionCookie: Boolean!
   createIngress(ingressType: Float!): Boolean!
   createSocialLink(data: SocialLinkInput!): Boolean!
+  createSponsorshipPlan(data: CreatePlanInput!): Boolean!
   createUser(data: CreateUserInput!): Boolean!
   deactivateAccount(data: DeactivateAccountInput!): AuthModel!
   deleteSocialLink(id: String!): Boolean!
+  deleteSponsorshipPlan(planId: String!): Boolean!
   disableTotp: Boolean!
   enableTotp(data: EnableTotpInput!): Boolean!
+  followChannel(channelId: String!): Boolean!
   generateStreamToken(data: GenerateStreamTokenInput!): GenerateStreamTokenModel!
   login(data: LoginInput!): AuthModel!
   logout: Boolean!
+  makeTransaction(planId: String!): MakePaymentModel!
   removeProfileAvatar: Boolean!
   removeSession(id: String!): Boolean!
   removeStreamThumbnail: Boolean!
   reorderSocialLinks(list: [SocialLinkOrderInput!]!): Boolean!
   sendChatMessage(data: SendMessageInput!): ChatMessageModel!
+  unfollowChannel(channelId: String!): Boolean!
   updateSocialLink(data: SocialLinkInput!, id: String!): Boolean!
   verifyAccount(data: VerificationInput!): UserModel!
 }
@@ -141,17 +178,70 @@ input NewPasswordInput {
   token: String!
 }
 
+type NotificationModel {
+  createdAt: DateTime!
+  id: ID!
+  isRead: Boolean!
+  message: String!
+  type: NotificationType!
+  updatedAt: DateTime!
+  user: UserModel!
+  userId: String!
+}
+
+type NotificationSettingsModel {
+  createdAt: DateTime!
+  id: ID!
+  siteNotifications: Boolean!
+  telegramNotifications: Boolean!
+  updatedAt: DateTime!
+  user: UserModel!
+  userId: String!
+}
+
+enum NotificationType {
+  ENABLE_TWO_FACTOR
+  NEW_FOLLOWER
+  NEW_SPONSPRSHIP
+  STREAM_START
+  VERIFIED_EMAIL
+}
+
+type PlanModel {
+  channel: UserModel!
+  channelId: String!
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  price: Float!
+  stripePlanId: String!
+  stripeProductId: String!
+  title: String!
+  updatedAt: DateTime!
+}
+
 type Query {
   findAllCategories: [CategoryModel!]!
   findAllStreams(filters: StreamFiltersInput!): [StreamModel!]!
   findCategoryBySlug(slug: String!): CategoryModel!
+  findChanelByUsername(username: String!): UserModel!
+  findChannelFollowersCount(channelId: String!): Float!
   findCurrentSession: SessionModel!
+  findMyFollowers: FollowModel!
+  findMyFollowings: FollowModel!
+  findMySponsorhipPlans: [PlanModel!]!
+  findMySubscriptions: [SubscriptionModel!]!
+  findMyTransactions: [TransactionModel!]!
+  findNotificationsByUser: [NotificationModel!]!
   findProfile: UserModel!
   findRandomCategories(take: Float): [CategoryModel!]!
   findRandomStreams(take: Float): [StreamModel!]!
+  findRecomendedChannels: [UserModel!]!
   findSesisonsByUser: [SessionModel!]!
   findSocialLinks: [SocialLinkModel!]!
+  findStreamById(id: String!): StreamModel!
   findStreamMessages(streamId: String!): [ChatMessageModel!]!
+  findUnreadNotificationsCount: Float!
   generateTotpSecret: TotpModel!
 }
 
@@ -227,9 +317,41 @@ type Subscription {
   chatMessageAdded(streamId: String!): ChatMessageModel!
 }
 
+type SubscriptionModel {
+  channel: UserModel!
+  channelId: String!
+  createdAt: DateTime!
+  expiresAt: DateTime!
+  id: ID!
+  plan: PlanModel!
+  planId: String!
+  updatedAt: DateTime!
+  user: UserModel!
+  userId: String!
+}
+
 type TotpModel {
   qrcodeUrl: String!
   secret: String!
+}
+
+type TransactionModel {
+  amount: Float!
+  createdAt: DateTime!
+  currency: String!
+  id: ID!
+  status: TransactionStatus!
+  stripeSubscriptionId: String!
+  updatedAt: DateTime!
+  user: UserModel!
+  userId: String!
+}
+
+enum TransactionStatus {
+  EXPIRED
+  FAILED
+  PENDING
+  SUCCESS
 }
 
 """The `Upload` scalar type represents a file upload."""
@@ -242,14 +364,19 @@ type UserModel {
   deactivatedAt: DateTime
   displayName: String!
   email: String!
+  followers: [FollowModel!]!
+  followings: [FollowModel!]!
   id: ID!
   isDeactivated: Boolean!
   isEmailVerified: Boolean!
   isTotpEnabled: Boolean!
   isVerified: Boolean!
+  notificationSettings: NotificationSettingsModel!
+  notifications: [NotificationModel!]!
   password: String!
   socialLinks: [SocialLinkModel!]!
   stream: StreamModel!
+  telegramId: String
   totpSecret: String
   updatedAt: DateTime!
   username: String!

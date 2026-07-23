@@ -30,6 +30,11 @@ export class StreamResolver {
 		return this.streamService.findRandom(take)
 	}
 
+	@Query(() => StreamModel, { name: 'findStreamById' })
+	public async findById(@Args('id') id: string) {
+		return this.streamService.findById(id)
+	}
+
 	@Authorization()
 	@Mutation(() => Boolean, { name: 'cangeStreamInfo' })
 	public async changeInfo(

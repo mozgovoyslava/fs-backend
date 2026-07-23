@@ -93,6 +93,27 @@ export class StreamService {
 		return streams.filter(stream => stream !== null)
 	}
 
+	public async findById(id: string) {
+		const stream = await this.prismaService.stream.findFirst({
+			where: {
+				id,
+				user: {
+					isDeactivated: false,
+				},
+			},
+			include: {
+				user: true,
+				category: true,
+			},
+		})
+
+		if (!stream) {
+			throw new NotFoundException('Стрим не найден')
+		}
+
+		return stream
+	}
+
 	public async changeInfo(user: User, input: ChangeStreamInput) {
 		const { title, categoryId } = input
 
@@ -226,7 +247,20 @@ export class StreamService {
 			canPublish: false,
 		})
 
-		return { token: token.toJwt() }
+		const liveKitUrl = new URL(
+			this.configService.getOrThrow<string>('LIVEKIT_API_URL'),
+		)
+
+		if (liveKitUrl.protocol === 'https:') {
+			liveKitUrl.protocol = 'wss:'
+		} else if (liveKitUrl.protocol === 'http:') {
+			liveKitUrl.protocol = 'ws:'
+		}
+
+		return {
+			serverUrl: liveKitUrl.toString().replace(/\/$/, ''),
+			token: token.toJwt(),
+		}
 	}
 
 	private async findByUserId(user: User) {

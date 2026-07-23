@@ -26,4 +26,17 @@ export class WebhookController {
 
 		return this.webhookService.receiveWebhookLivekit(body, authorization)
 	}
+
+	@Post('stripe')
+	@HttpCode(HttpStatus.OK)
+	public async receiveWebhookStripe(
+		@Body() body: string,
+		@Headers('stripe-signature') signature: string,
+	) {
+		if (!signature) {
+			throw new UnauthorizedException('Отсутствует подпись Stripe')
+		}
+
+		return this.webhookService.receiveWebhookStripe(body, signature)
+	}
 }

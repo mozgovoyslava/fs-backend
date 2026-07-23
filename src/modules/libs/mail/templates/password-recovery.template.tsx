@@ -24,7 +24,7 @@ export function PasswordRecoveryTemplate({
     token,
     metadata
 }: PasswordRecoveryTemplateProps) {
-    const resetLink = `${domain}/account/reset-password?token=${token}`;
+    const resetLink = `${domain}/reset-password?token=${token}`;
 
     const location = [metadata.location?.country, metadata.location?.city]
         .filter(Boolean)
